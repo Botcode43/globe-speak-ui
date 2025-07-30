@@ -12,27 +12,95 @@ import {
   Wifi, 
   WifiOff,
   Volume2,
-  Languages
+  Languages,
+  Download,
+  CheckCircle
 } from "lucide-react";
+import { translationService } from "@/services/translationService";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useToast } from "@/hooks/use-toast";
 
 const TranslatorScreen = () => {
   const navigate = useNavigate();
+  const networkOnline = useNetworkStatus();
+  const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [userName] = useState("Sarah Johnson"); // Mock user
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [isInitializingOffline, setIsInitializingOffline] = useState(false);
+  const [offlineReady, setOfflineReady] = useState(false);
 
-  // Mock translation effect
+  // Initialize offline translator on component mount
+  useEffect(() => {
+    const initOffline = async () => {
+      setIsInitializingOffline(true);
+      try {
+        await translationService.initializeOfflineTranslator();
+        setOfflineReady(true);
+        toast({
+          title: "Offline mode ready",
+          description: "Translation will work even without internet connection",
+        });
+      } catch (error) {
+        console.error("Failed to initialize offline translator:", error);
+        toast({
+          title: "Offline mode unavailable",
+          description: "Could not load offline translation model",
+          variant: "destructive",
+        });
+      } finally {
+        setIsInitializingOffline(false);
+      }
+    };
+
+    initOffline();
+  }, [toast]);
+
+  // Auto-update online status based on network
+  useEffect(() => {
+    if (!networkOnline && isOnline) {
+      setIsOnline(false);
+      toast({
+        title: "Network disconnected",
+        description: "Switched to offline mode automatically",
+      });
+    }
+  }, [networkOnline, isOnline, toast]);
+
+  // Mock translation effect with real translation service
   useEffect(() => {
     if (isRecording) {
-      const timer = setTimeout(() => {
-        setOriginalText("Hello, how are you today?");
-        setTranslatedText("Hola, ¿cómo estás hoy?");
+      const timer = setTimeout(async () => {
+        const mockText = "Hello, how are you today?";
+        setOriginalText(mockText);
+        setIsTranslating(true);
+        
+        try {
+          const result = await translationService.translate(mockText, isOnline && networkOnline);
+          setTranslatedText(result.text);
+          
+          toast({
+            title: "Translation complete",
+            description: `Used ${isOnline && networkOnline ? 'online' : 'offline'} translation`,
+          });
+        } catch (error) {
+          console.error("Translation failed:", error);
+          toast({
+            title: "Translation failed",
+            description: "Could not translate the text",
+            variant: "destructive",
+          });
+          setTranslatedText("Translation unavailable");
+        } finally {
+          setIsTranslating(false);
+        }
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isRecording]);
+  }, [isRecording, isOnline, networkOnline, toast]);
 
   const handleStartStop = () => {
     if (isRecording) {
@@ -42,6 +110,18 @@ const TranslatorScreen = () => {
       setOriginalText("");
       setTranslatedText("");
     }
+  };
+
+  const handleToggleOnlineMode = () => {
+    if (!networkOnline) {
+      toast({
+        title: "No network connection",
+        description: "Cannot switch to online mode without internet",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsOnline(!isOnline);
   };
 
   const handleLogout = () => {
@@ -78,8 +158,9 @@ const TranslatorScreen = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsOnline(!isOnline)}
+                  onClick={handleToggleOnlineMode}
                   className="h-8"
+                  disabled={!networkOnline}
                 >
                   Toggle
                 </Button>
@@ -126,6 +207,34 @@ const TranslatorScreen = () => {
                   <Languages className="w-5 h-5 text-primary" />
                 </div>
               </div>
+              
+              {/* Status indicators */}
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  {isInitializingOffline ? (
+                    <>
+                      <Download className="w-4 h-4 text-primary animate-pulse" />
+                      <span className="text-muted-foreground">Loading offline model...</span>
+                    </>
+                  ) : offlineReady ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-success" />
+                      <span className="text-success">Offline ready</span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Offline unavailable</span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    (isOnline && networkOnline) ? 'bg-success' : 'bg-warning'
+                  }`} />
+                  <span className="text-muted-foreground">
+                    {(isOnline && networkOnline) ? 'Online mode' : 'Offline mode'}
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -158,7 +267,7 @@ const TranslatorScreen = () => {
 
           <div className="text-center">
             <p className="text-muted-foreground">
-              {isRecording ? "Listening..." : "Tap to start speaking"}
+              {isRecording ? "Listening..." : isTranslating ? "Translating..." : "Tap to start speaking"}
             </p>
           </div>
 
@@ -202,9 +311,11 @@ const TranslatorScreen = () => {
           {/* Status Indicators */}
           <div className="flex justify-center gap-6 pt-4">
             <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-success animate-pulse' : 'bg-muted-foreground'}`} />
+              <div className={`w-3 h-3 rounded-full ${
+                (isOnline && networkOnline) ? 'bg-success animate-pulse' : 'bg-warning'
+              }`} />
               <span className="text-sm text-muted-foreground">
-                {isOnline ? 'Connected' : 'Offline Mode'}
+                {(isOnline && networkOnline) ? 'Online' : 'Offline Mode'}
               </span>
             </div>
             
@@ -212,6 +323,13 @@ const TranslatorScreen = () => {
               <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-destructive animate-pulse' : 'bg-muted-foreground'}`} />
               <span className="text-sm text-muted-foreground">
                 {isRecording ? 'Recording' : 'Ready'}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${offlineReady ? 'bg-success' : 'bg-muted-foreground'}`} />
+              <span className="text-sm text-muted-foreground">
+                {offlineReady ? 'Offline Ready' : 'Offline N/A'}
               </span>
             </div>
           </div>
