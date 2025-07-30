@@ -34,15 +34,17 @@ const AuthScreen = ({ mode }: AuthScreenProps) => {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/')}
-            className="absolute top-4 left-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
+          <div className="flex justify-start mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back
+            </Button>
+          </div>
           
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-12 h-12 bg-gradient-sky rounded-xl flex items-center justify-center">

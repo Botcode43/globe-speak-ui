@@ -64,9 +64,9 @@ const TranslatorScreen = () => {
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              {/* Online/Offline Toggle */}
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 md:gap-3">
+              {/* Online/Offline Toggle - Hidden on mobile */}
+              <div className="hidden sm:flex items-center gap-2">
                 {isOnline ? (
                   <Wifi className="w-5 h-5 text-success" />
                 ) : (
@@ -85,14 +85,23 @@ const TranslatorScreen = () => {
                 </Button>
               </div>
               
+              {/* Mobile Status Indicator */}
+              <div className="sm:hidden flex items-center gap-1">
+                {isOnline ? (
+                  <Wifi className="w-4 h-4 text-success" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-muted-foreground" />
+                )}
+              </div>
+              
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
               >
                 <LogOut className="w-4 h-4" />
-                Logout
+                <span className="hidden sm:inline ml-1">Logout</span>
               </Button>
             </div>
           </div>
