@@ -11,7 +11,6 @@ import {
   Square, 
   Wifi, 
   WifiOff,
-  Volume2,
   Languages,
   Download,
   CheckCircle
@@ -82,17 +81,14 @@ const TranslatorScreen = () => {
           const result = await translationService.translate(mockText, isOnline && networkOnline);
           setTranslatedText(result.text);
           
-          toast({
-            title: "Translation complete",
-            description: `Used ${isOnline && networkOnline ? 'online' : 'offline'} translation`,
-          });
+          // Auto-play translated text
+          if (result.text && 'speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(result.text);
+            utterance.lang = 'es-ES'; // Spanish
+            speechSynthesis.speak(utterance);
+          }
         } catch (error) {
           console.error("Translation failed:", error);
-          toast({
-            title: "Translation failed",
-            description: "Could not translate the text",
-            variant: "destructive",
-          });
           setTranslatedText("Translation unavailable");
         } finally {
           setIsTranslating(false);
@@ -238,8 +234,8 @@ const TranslatorScreen = () => {
             </CardContent>
           </Card>
 
-          {/* Control Buttons */}
-          <div className="flex justify-center gap-4">
+          {/* Control Button */}
+          <div className="flex justify-center">
             <Button
               variant={isRecording ? "destructive" : "hero"}
               size="fab"
@@ -254,14 +250,6 @@ const TranslatorScreen = () => {
               ) : (
                 <Play className="w-8 h-8 ml-1" />
               )}
-            </Button>
-            
-            <Button
-              variant="secondary"
-              size="fab"
-              disabled={!originalText}
-            >
-              <Volume2 className="w-6 h-6" />
             </Button>
           </div>
 
