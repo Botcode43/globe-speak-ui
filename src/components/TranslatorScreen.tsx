@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { 
   Globe, 
@@ -31,6 +32,8 @@ const TranslatorScreen = () => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isInitializingOffline, setIsInitializingOffline] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
+  const [sourceLanguage, setSourceLanguage] = useState("en");
+  const [targetLanguage, setTargetLanguage] = useState("es");
 
   // Initialize offline translator on component mount
   useEffect(() => {
@@ -39,24 +42,15 @@ const TranslatorScreen = () => {
       try {
         await translationService.initializeOfflineTranslator();
         setOfflineReady(true);
-        toast({
-          title: "Offline mode ready",
-          description: "Translation will work even without internet connection",
-        });
       } catch (error) {
         console.error("Failed to initialize offline translator:", error);
-        toast({
-          title: "Offline mode unavailable",
-          description: "Could not load offline translation model",
-          variant: "destructive",
-        });
       } finally {
         setIsInitializingOffline(false);
       }
     };
 
     initOffline();
-  }, [toast]);
+  }, []);
 
   // Auto-update online status based on network
   useEffect(() => {
@@ -84,7 +78,20 @@ const TranslatorScreen = () => {
           // Auto-play translated text
           if (result.text && 'speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(result.text);
-            utterance.lang = 'es-ES'; // Spanish
+            // Map language codes to speech synthesis locale codes
+            const langMap: Record<string, string> = {
+              en: 'en-US',
+              es: 'es-ES',
+              fr: 'fr-FR',
+              de: 'de-DE',
+              it: 'it-IT',
+              pt: 'pt-PT',
+              ru: 'ru-RU',
+              ja: 'ja-JP',
+              ko: 'ko-KR',
+              zh: 'zh-CN'
+            };
+            utterance.lang = langMap[targetLanguage] || 'en-US';
             speechSynthesis.speak(utterance);
           }
         } catch (error) {
@@ -96,7 +103,7 @@ const TranslatorScreen = () => {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isRecording, isOnline, networkOnline, toast]);
+  }, [isRecording, isOnline, networkOnline, targetLanguage]);
 
   const handleStartStop = () => {
     if (isRecording) {
@@ -192,43 +199,55 @@ const TranslatorScreen = () => {
           {/* Language Selection */}
           <Card className="shadow-gentle">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Languages className="w-5 h-5 text-primary" />
-                  <span className="font-medium text-foreground">English (US)</span>
-                </div>
-                <div className="text-muted-foreground">→</div>
-                <div className="flex items-center gap-3">
-                  <span className="font-medium text-foreground">Español (ES)</span>
-                  <Languages className="w-5 h-5 text-primary" />
-                </div>
-              </div>
-              
-              {/* Status indicators */}
-              <div className="mt-4 flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  {isInitializingOffline ? (
-                    <>
-                      <Download className="w-4 h-4 text-primary animate-pulse" />
-                      <span className="text-muted-foreground">Loading offline model...</span>
-                    </>
-                  ) : offlineReady ? (
-                    <>
-                      <CheckCircle className="w-4 h-4 text-success" />
-                      <span className="text-success">Offline ready</span>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">Offline unavailable</span>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    (isOnline && networkOnline) ? 'bg-success' : 'bg-warning'
-                  }`} />
-                  <span className="text-muted-foreground">
-                    {(isOnline && networkOnline) ? 'Online mode' : 'Offline mode'}
-                  </span>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">From</label>
+                    <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Spanish</SelectItem>
+                        <SelectItem value="fr">French</SelectItem>
+                        <SelectItem value="de">German</SelectItem>
+                        <SelectItem value="it">Italian</SelectItem>
+                        <SelectItem value="pt">Portuguese</SelectItem>
+                        <SelectItem value="ru">Russian</SelectItem>
+                        <SelectItem value="ja">Japanese</SelectItem>
+                        <SelectItem value="ko">Korean</SelectItem>
+                        <SelectItem value="zh">Chinese</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex justify-center">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Languages className="w-4 h-4 text-primary" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">To</label>
+                    <Select value={targetLanguage} onValueChange={setTargetLanguage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Spanish</SelectItem>
+                        <SelectItem value="fr">French</SelectItem>
+                        <SelectItem value="de">German</SelectItem>
+                        <SelectItem value="it">Italian</SelectItem>
+                        <SelectItem value="pt">Portuguese</SelectItem>
+                        <SelectItem value="ru">Russian</SelectItem>
+                        <SelectItem value="ja">Japanese</SelectItem>
+                        <SelectItem value="ko">Korean</SelectItem>
+                        <SelectItem value="zh">Chinese</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -311,13 +330,6 @@ const TranslatorScreen = () => {
               <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-destructive animate-pulse' : 'bg-muted-foreground'}`} />
               <span className="text-sm text-muted-foreground">
                 {isRecording ? 'Recording' : 'Ready'}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${offlineReady ? 'bg-success' : 'bg-muted-foreground'}`} />
-              <span className="text-sm text-muted-foreground">
-                {offlineReady ? 'Offline Ready' : 'Offline N/A'}
               </span>
             </div>
           </div>
